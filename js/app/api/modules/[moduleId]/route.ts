@@ -1,6 +1,5 @@
-import { connectMongoClient } from "@/lib/db";
+import { createClient } from "@/lib/server";
 import { NextResponse } from "next/server";
-import { Db, Collection } from "mongodb";
 
 export async function DELETE(
   req: Request,
@@ -8,8 +7,6 @@ export async function DELETE(
 ) {
   try {
     const { moduleId } = params;
-
-    // Validate moduleId
     if (!moduleId) {
       return NextResponse.json(
         { error: "Module ID is required" },
@@ -17,17 +14,28 @@ export async function DELETE(
       );
     }
 
-    const client = await connectMongoClient();
-    const db: Db = client.db("unibuddy");
-    const modulesCollection: Collection = db.collection("modules");
+    const supabase = await createClient();
+    
+    const { error: countError } = await supabase
+      .from("Modules")
+      .select("*", { count: "exact", head: true })
+      .eq("module_id", moduleId);
 
-    // Delete the module
-    const result = await modulesCollection.deleteOne({
-      id: moduleId,
-    });
+    if (countError) {
+      console.error("Error fetching count:", countError);
+      return NextResponse.json({ error: countError.message }, { status: 500 });
+    }
 
-    if (result.deletedCount === 0) {
-      return NextResponse.json({ error: "Module not found" }, { status: 404 });
+    // Then, perform the delete operation
+    const { error: deleteError } = await supabase
+      .from("Modules")
+      .delete()
+      .eq("module_id", moduleId);
+
+    if (deleteError) {
+      console.error("Error deleting module:", deleteError);
+      return NextResponse.json({ error: deleteError.message }, { status: 500 });
+      // Handle error accordingly
     }
 
     return NextResponse.json(

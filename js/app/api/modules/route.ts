@@ -1,18 +1,21 @@
 // app/api/modules/route.ts
 import { NextResponse } from "next/server";
-import { connectMongoClient } from "@/lib/db";
-import { Db, Collection } from "mongodb";
+import { createClient } from "@/lib/server";
 
 export async function GET() {
   try {
-    const client = await connectMongoClient();
-    const db: Db = client.db("unibuddy");
-    const modulesCollection: Collection = db.collection("modules");
+    const supabase = await createClient();
 
-    const modules = await modulesCollection.find({}).toArray();
+    const { data: modules, error } = await supabase.from("Modules").select("*");
+
+    if (error) {
+      console.error("Supabase fetch error:", error);
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+
     return NextResponse.json({ modules });
-  } catch (e) {
-    console.error(e);
+  } catch (error) {
+    console.error("Unexpected error:", error);
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }
@@ -23,20 +26,25 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { id, name, year, term } = body;
-    if (!id || !name || !year || !term) {
+    const { moduleId, name, year, term } = body;
+    if (!moduleId || !name || !year || !term) {
       return NextResponse.json({ message: "Missing fields" }, { status: 400 });
     }
 
-    const client = await connectMongoClient();
-    const db: Db = client.db("unibuddy");
-    const modulesCollection: Collection = db.collection("modules");
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("Modules")
+      .insert([{ module_id: moduleId, name, year, term }])
+      .select()
+      .single();
 
-    const newModule = { id, name, year, term };
-    await modulesCollection.insertOne(newModule);
+    if (error) {
+      console.error("Supabase insert error:", error);
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
 
     return NextResponse.json(
-      { message: "Module added", module: newModule },
+      { message: "Module added", module: data },
       { status: 201 }
     );
   } catch (error) {

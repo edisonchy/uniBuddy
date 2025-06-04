@@ -46,6 +46,7 @@ import { Trash2 } from "lucide-react";
 
 interface Module {
   id: string;
+  module_id: string;
   name: string;
   term: string;
   year: string;
@@ -94,7 +95,7 @@ export default function Home() {
       }
 
       // Update the UI by removing the deleted module
-      setModules(modules.filter((mod) => mod.id !== moduleId));
+      setModules(modules.filter((mod) => mod.module_id !== moduleId));
       toast.success("Module deleted successfully!");
     } catch (error) {
       console.error("Error deleting module:", error);
@@ -109,7 +110,7 @@ export default function Home() {
     const formData = new FormData(e.currentTarget);
 
     const newModule = {
-      id: formData.get("moduleCode") as string,
+      moduleId: formData.get("moduleCode") as string,
       name: formData.get("name") as string,
       year: formData.get("year") as string,
       term: formData.get("term") as string,
@@ -211,7 +212,7 @@ export default function Home() {
                     id="name"
                     name="name"
                     required
-                    placeholder="e.g., Introduction to Computer Science"
+                    placeholder="e.g., Introduction to Marketing"
                     className="flex-1"
                   />
                 </div>
@@ -289,7 +290,7 @@ export default function Home() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDeleteModule(mod.id)}>
+                      <AlertDialogAction onClick={() => handleDeleteModule(mod.module_id)}>
                         Delete
                       </AlertDialogAction>
                     </AlertDialogFooter>
@@ -298,7 +299,7 @@ export default function Home() {
 
                 <CardHeader>
                   <CardTitle className="text-lg sm:text-xl font-semibold">
-                    🧩 {mod.id}
+                    🧩 {mod.module_id}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -313,7 +314,7 @@ export default function Home() {
                 <CardFooter>
                   <Link
                     href={{
-                      pathname: `/modules/${mod.id}`,
+                      pathname: `/modules/${mod.module_id}`,
                       query: { name: mod.name, year: mod.year, term: mod.term },
                     }}
                     className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
