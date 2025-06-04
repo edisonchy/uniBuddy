@@ -1,0 +1,61 @@
+# =========================
+# 💻 NODE / NEXT.JS FRONTEND
+# =========================
+
+# dependencies
+/js/node_modules
+/js/.pnp
+/js/.pnp.*
+/js/.yarn/*
+!/js/.yarn/patches
+!/js/.yarn/plugins
+!/js/.yarn/releases
+!/js/.yarn/versions
+
+# testing
+/js/coverage
+
+# next.js
+/js/.next/
+/js/out/
+
+# production
+/js/build
+
+# debug logs
+/js/npm-debug.log*
+/js/yarn-debug.log*
+/js/yarn-error.log*
+/js/.pnpm-debug.log*
+
+# env files
+/js/.env*
+
+# vercel
+/js/.vercel
+
+# typescript
+/js/*.tsbuildinfo
+/js/next-env.d.ts
+
+# ========================
+# 🐍 PYTHON BACKEND
+# ========================
+
+/py/__pycache__/
+/py/*.py[cod]
+/py/.venv/
+/py/venv/
+/py/*.egg-info
+/py/*.sqlite3
+/py/*.db
+
+# ========================
+# 🌍 GENERAL
+# ========================
+.DS_Store
+Thumbs.db
+*.pem
+.env
+.env.local
+.env.production
