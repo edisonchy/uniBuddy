@@ -50,6 +50,7 @@ interface Module {
   name: string;
   term: string;
   year: string;
+  outline_uploaded: boolean;
 }
 
 export default function Home() {
@@ -180,7 +181,7 @@ export default function Home() {
 
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="outline">Add Module</Button>
+            <Button variant="outline" className="cursor-pointer">Add Module</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -248,11 +249,11 @@ export default function Home() {
 
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button type="button" variant="outline" id="closeDialog">
+                  <Button type="button" variant="outline" id="closeDialog" className="cursor-pointer">
                     Cancel
                   </Button>
                 </DialogClose>
-                <Button type="submit">Add Module</Button>
+                <Button type="submit" className="cursor-pointer">Add Module</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -274,7 +275,7 @@ export default function Home() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors"
+                      className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
                       aria-label={`Delete module ${mod.id}`}
                     >
                       <Trash2 className="h-5 w-5" />
@@ -315,7 +316,7 @@ export default function Home() {
                   <Link
                     href={{
                       pathname: `/modules/${mod.module_id}`,
-                      query: { name: mod.name, year: mod.year, term: mod.term },
+                      query: { name: mod.name, year: mod.year, term: mod.term, uploaded: mod.outline_uploaded },
                     }}
                     className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                     aria-label={`View lectures for ${mod.id}`}

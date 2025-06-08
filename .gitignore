@@ -41,7 +41,6 @@
 # ========================
 # 🐍 PYTHON BACKEND
 # ========================
-
 /py/__pycache__/
 /py/*.py[cod]
 /py/.venv/
@@ -49,6 +48,8 @@
 /py/*.egg-info
 /py/*.sqlite3
 /py/*.db
+/py/downloads/
+/py/files/
 
 # ========================
 # 🌍 GENERAL
