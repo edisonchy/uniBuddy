@@ -1,3 +1,5 @@
+# server.py
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from download_outline import download_outline
@@ -11,17 +13,21 @@ def supabase_webhook():
     payload = request.get_json()
     record = payload.get("record", {})
     bucket, name = record.get("bucket_id"), record.get("name")
-
     if not bucket or not name:
         return jsonify({"error": "Missing bucket or file name"}), 400
 
     try:
         local_path = download_outline(bucket, name)
-        result = process_outline(local_path)
+    except Exception as e:
+        app.logger.error("Download failed: %s", e)
+        return jsonify({"error": str(e)}), 500
 
+    try:
+        result = process_outline(local_path)
+        app.logger.info("Processed result: %s", result)
         return jsonify({"message": "OK"}), 200
     except Exception as e:
-        print(e)
+        app.logger.error("Processing failed: %s", e)
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":

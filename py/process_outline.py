@@ -1,21 +1,17 @@
-# process_outline.py
-
-import os
-import json
-import PyPDF2
 from dotenv import load_dotenv
+load_dotenv()
+
+import os, json, PyPDF2
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 
-load_dotenv()
-
 groq_api_key = os.getenv("GROQ_API_KEY")
-
 llm = ChatGroq(
-    model="llama-3.1-8b-instant", temperature=0.0, max_retries=2, api_key=groq_api_key
-).with_structured_output(method="json_mode", include_raw=True)
-
-from langchain.prompts import PromptTemplate
+    model="llama-3.1-8b-instant",
+    temperature=0.0,
+    max_retries=2,
+    api_key=groq_api_key,
+)
 
 prompt_template = PromptTemplate(
     input_variables=["document_text"],
@@ -65,26 +61,21 @@ def extract_text_from_pdf(path: str) -> str:
         reader = PyPDF2.PdfReader(f)
         return "".join(page.extract_text() or "" for page in reader.pages)
 
-
 def process_outline(file_path: str) -> dict:
     text = extract_text_from_pdf(file_path)
+    prompt = prompt_template.format(document_text=text)
+    response = llm.invoke([
+        {"role": "system", "content": "You are an academic assistant."},
+        {"role": "user", "content": prompt},
+    ])
+    raw = response.content
+    print("🔹 Raw LLM output:", raw, flush=True)
 
+    # Remove triple-backticks if any, then parse JSON
+    if raw.strip().startswith("```"):
+        raw = raw.strip().lstrip("```json").rstrip("```").strip()
     try:
-        prompt = prompt_template.format(document_text=text)
-        messages = [
-            {"role": "system", "content": "You are an academic assistant."},
-            {"role": "user", "content": prompt},
-        ]
-
-        response = llm.invoke(messages)
-    except Exception as e:
-        print("❗ LLM error:", e, flush=True)
-        return {"error": str(e)}
-
-    print("🔹 LLM raw output:", response, flush=True)
-    try:
-        # return json.loads(response)
-        return response
-    except json.JSONDecodeError:
-        print("❗ JSON parse error:", response.content, flush=True)
-        return {"error": "Invalid JSON from model", "raw": response.content}
+        return json.loads(raw)
+    except json.JSONDecodeError as e:
+        print("❗ JSON parse error:", e, flush=True)
+        raise RuntimeError(f"Failed to parse JSON: {e}")
