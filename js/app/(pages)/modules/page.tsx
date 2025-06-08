@@ -50,7 +50,7 @@ interface Module {
   name: string;
   term: string;
   year: string;
-  outline_uploaded: boolean;
+  outline_uploaded: string;
 }
 
 export default function Home() {

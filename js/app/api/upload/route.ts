@@ -1,14 +1,15 @@
-// app/api/upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/server"; // Adjust the import path as needed
+import { createClient } from "@/lib/server";
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
+    const moduleId = formData.get("moduleId") as string;
 
-    if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+
+    if (!file || !moduleId) {
+      return NextResponse.json({ error: "No file or module ID uploaded" }, { status: 400 });
     }
 
     if (file.type !== "application/pdf") {
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = await createClient();
 
-    const filePath = `uploads/${Date.now()}-${file.name}`;
+    const filePath = `${moduleId}/${Date.now()}-${file.name}`;
 
     const { error } = await supabase.storage
       .from("outlines")
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { data } = supabase.storage
-      .from("outlines") // Replace with your actual bucket name
+      .from("outlines") 
       .getPublicUrl(filePath);
 
     return NextResponse.json(

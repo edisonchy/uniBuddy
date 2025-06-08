@@ -37,7 +37,7 @@ export default function CollapsibleDemo() {
           </div>
         </div>
         <div>
-          <FileUploadCard />
+          <FileUploadCard moduleId={moduleId} />
         </div>
       </section>
     </main>

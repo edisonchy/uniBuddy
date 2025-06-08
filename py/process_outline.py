@@ -69,7 +69,7 @@ def process_outline(file_path: str) -> dict:
         {"role": "user", "content": prompt},
     ])
     raw = response.content
-    print("🔹 Raw LLM output:", raw, flush=True)
+    # print("🔹 Raw LLM output:", raw, flush=True)
 
     # Remove triple-backticks if any, then parse JSON
     if raw.strip().startswith("```"):

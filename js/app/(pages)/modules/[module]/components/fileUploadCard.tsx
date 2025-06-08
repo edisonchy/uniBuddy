@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import FileIcon from "@/app/(pages)/modules/[module]/components/fileIcon";
 
-export default function FileUploadCard() {
+type FileUploadCardProps = {
+  moduleId: string;
+};
+
+export default function FileUploadCard({ moduleId }: FileUploadCardProps) {
   const [files, setFiles] = useState<File[]>([]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -48,8 +52,8 @@ export default function FileUploadCard() {
 
     const formData = new FormData();
     formData.append("file", files[0]);
+    formData.append("moduleId", moduleId);
 
-    // Replace with your actual upload endpoint
     fetch("/api/upload", {
       method: "POST",
       body: formData,

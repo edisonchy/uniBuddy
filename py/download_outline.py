@@ -1,5 +1,3 @@
-# download_outline.py
-
 import os
 import requests
 from supabase import create_client, Client
