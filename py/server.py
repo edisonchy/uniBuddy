@@ -18,8 +18,10 @@ def supabase_webhook():
     try:
         local_path = download_outline(bucket, name)
         result = process_outline(local_path)
-        return jsonify({"message": "OK", "analysis": result}), 200
+
+        return jsonify({"message": "OK"}), 200
     except Exception as e:
+        print(e)
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":

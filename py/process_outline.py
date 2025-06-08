@@ -8,14 +8,14 @@ from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 
 load_dotenv()
+
 groq_api_key = os.getenv("GROQ_API_KEY")
 
 llm = ChatGroq(
-    model="llama-3.1-8b-instant",
-    temperature=0.0,
-    max_retries=2,
-    api_key=groq_api_key
-)
+    model="llama-3.1-8b-instant", temperature=0.0, max_retries=2, api_key=groq_api_key
+).with_structured_output(method="json_mode", include_raw=True)
+
+from langchain.prompts import PromptTemplate
 
 prompt_template = PromptTemplate(
     input_variables=["document_text"],
@@ -27,9 +27,11 @@ Your objectives are:
 1. Determine whether the document is a course outline. Respond with 'Yes' or 'No'.
 
 2. If it is a course outline:
-   a. Extract the lecturer's name and email address.
+   a. Extract all lecturers’ names and email addresses.
    b. List the course topics covered.
    c. Describe the assessment methods used in the module (e.g., exam, coursework, presentations, essays) and specify their respective weightings in percentage.
+   d. Extract all learning outcomes as a list.
+   e. Extract textbook information, including title, edition, authors, publisher, and publication year if available.
 
 3. If it is not a course outline:
    a. Set all fields except 'course_outline' to empty values.
@@ -39,15 +41,22 @@ Document Text:
 
 Please respond in valid JSON:
 
-{
+{{  
   "course_outline": "<Yes/No>",
-  "lecturer": {
-    "name": "",
-    "email": ""
-  },
+  "lecturers": [
+    {{ "name": "", "email": "" }}
+  ],
   "topics": [],
-  "assessment": []
-}
+  "assessment": [],
+  "learning_outcomes": [],
+  "textbook": {{
+    "title": "",
+    "edition": "",
+    "authors": "",
+    "publisher": "",
+    "year": ""
+  }}
+}}
 """
 )
 
@@ -56,16 +65,26 @@ def extract_text_from_pdf(path: str) -> str:
         reader = PyPDF2.PdfReader(f)
         return "".join(page.extract_text() or "" for page in reader.pages)
 
+
 def process_outline(file_path: str) -> dict:
     text = extract_text_from_pdf(file_path)
-    prompt = prompt_template.format(document_text=text)
-    messages = [
-        {"role": "system", "content": "You are an academic assistant."},
-        {"role": "user", "content": prompt}
-    ]
 
-    response = llm.invoke(messages)
     try:
-        return json.loads(response.content)
+        prompt = prompt_template.format(document_text=text)
+        messages = [
+            {"role": "system", "content": "You are an academic assistant."},
+            {"role": "user", "content": prompt},
+        ]
+
+        response = llm.invoke(messages)
+    except Exception as e:
+        print("❗ LLM error:", e, flush=True)
+        return {"error": str(e)}
+
+    print("🔹 LLM raw output:", response, flush=True)
+    try:
+        # return json.loads(response)
+        return response
     except json.JSONDecodeError:
+        print("❗ JSON parse error:", response.content, flush=True)
         return {"error": "Invalid JSON from model", "raw": response.content}
