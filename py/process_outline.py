@@ -75,7 +75,13 @@ def process_outline(file_path: str) -> dict:
     if raw.strip().startswith("```"):
         raw = raw.strip().lstrip("```json").rstrip("```").strip()
     try:
-        return json.loads(raw)
+        parsed_json = json.loads(raw)
+        if parsed_json.get("course_outline") == "No":
+            raise RuntimeError("Document is not a course outline.")
+        return parsed_json
     except json.JSONDecodeError as e:
         print("❗ JSON parse error:", e, flush=True)
-        raise RuntimeError(f"Failed to parse JSON: {e}")
+        raise RuntimeError(f"Failed to parse JSON from LLM response: {e}")
+    except KeyError:
+        print("❗ 'course_outline' key not found in LLM response.", flush=True)
+        raise RuntimeError("LLM response missing 'course_outline' key.")

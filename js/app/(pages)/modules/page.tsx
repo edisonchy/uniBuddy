@@ -58,6 +58,13 @@ export default function Home() {
   const [selectedFilter, setSelectedFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [moduleCode, setModuleCode] = useState("");
+  const [moduleName, setModuleName] = useState("");
+  const [moduleYear, setModuleYear] = useState("");
+  const [moduleTerm, setModuleTerm] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null); // Stores module_id being deleted
 
   useEffect(() => {
     const fetchModules = async () => {
@@ -85,6 +92,7 @@ export default function Home() {
   }, []);
 
   const handleDeleteModule = async (moduleId: string) => {
+    setIsDeleting(moduleId);
     try {
       const response = await fetch(`/api/modules/${moduleId}`, {
         method: "DELETE",
@@ -103,39 +111,53 @@ export default function Home() {
       toast.error(
         error instanceof Error ? error.message : "Failed to delete module"
       );
+    } finally {
+      setIsDeleting(null); // Reset deleting state
     }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-
+    setIsSubmitting(true);
+    // Use your state variables directly instead of FormData
     const newModule = {
-      moduleId: formData.get("moduleCode") as string,
-      name: formData.get("name") as string,
-      year: formData.get("year") as string,
-      term: formData.get("term") as string,
+      moduleId: moduleCode,
+      name: moduleName,
+      year: moduleYear,
+      term: moduleTerm,
     };
 
     try {
+      // ... (your fetch logic)
       const response = await fetch("/api/modules", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newModule),
       });
 
-      if (!response.ok) throw new Error("Failed to add module");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to add module");
+      }
 
       const result = await response.json();
       setModules((prev) => [...prev, result.module]);
-      document.getElementById("closeDialog")?.click();
+
+      // Reset form fields
+      setModuleCode("");
+      setModuleName("");
+      setModuleYear("");
+      setModuleTerm("");
+      setIsDialogOpen(false); // Close the dialog
 
       toast.success("Module added successfully!");
     } catch (error) {
       console.error("Error adding module:", error);
-      toast.error("Failed to add module.");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to add module."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -179,9 +201,17 @@ export default function Home() {
           </Select>
         </div>
 
-        <Dialog>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          {" "}
+          {/* Control dialog visibility */}
           <DialogTrigger asChild>
-            <Button variant="outline" className="cursor-pointer">Add Module</Button>
+            <Button
+              variant="outline"
+              className="cursor-pointer"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Adding..." : "Add Module"}
+            </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -202,9 +232,11 @@ export default function Home() {
                     required
                     placeholder="e.g., MKT101"
                     className="flex-1"
+                    value={moduleCode} // Controlled input
+                    onChange={(e) => setModuleCode(e.target.value)}
                   />
                 </div>
-
+                {/* Repeat for name, year, and term */}
                 <div className="flex items-center gap-4">
                   <Label htmlFor="name" className="w-32 text-right">
                     Module Name
@@ -215,6 +247,8 @@ export default function Home() {
                     required
                     placeholder="e.g., Introduction to Marketing"
                     className="flex-1"
+                    value={moduleName}
+                    onChange={(e) => setModuleName(e.target.value)}
                   />
                 </div>
 
@@ -228,6 +262,8 @@ export default function Home() {
                     required
                     placeholder="e.g., 2023"
                     className="flex-1"
+                    value={moduleYear}
+                    onChange={(e) => setModuleYear(e.target.value)}
                   />
                 </div>
 
@@ -235,7 +271,12 @@ export default function Home() {
                   <Label htmlFor="term" className="w-32 text-right">
                     Term
                   </Label>
-                  <Select name="term" required>
+                  <Select
+                    name="term"
+                    required
+                    value={moduleTerm}
+                    onValueChange={setModuleTerm}
+                  >
                     <SelectTrigger className="flex-1">
                       <SelectValue placeholder="Select term" />
                     </SelectTrigger>
@@ -246,14 +287,19 @@ export default function Home() {
                   </Select>
                 </div>
               </div>
-
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button type="button" variant="outline" id="closeDialog" className="cursor-pointer">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="cursor-pointer"
+                  >
                     Cancel
                   </Button>
                 </DialogClose>
-                <Button type="submit" className="cursor-pointer">Add Module</Button>
+                <Button type="submit" className="cursor-pointer">
+                  Add Module
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -291,8 +337,13 @@ export default function Home() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDeleteModule(mod.module_id)}>
-                        Delete
+                      <AlertDialogAction
+                        onClick={() => handleDeleteModule(mod.module_id)}
+                        disabled={isDeleting === mod.module_id}
+                      >
+                        {isDeleting === mod.module_id
+                          ? "Deleting..."
+                          : "Delete"}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -316,7 +367,12 @@ export default function Home() {
                   <Link
                     href={{
                       pathname: `/modules/${mod.module_id}`,
-                      query: { name: mod.name, year: mod.year, term: mod.term, uploaded: mod.outline_uploaded },
+                      query: {
+                        name: mod.name,
+                        year: mod.year,
+                        term: mod.term,
+                        uploaded: mod.outline_uploaded,
+                      },
                     }}
                     className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                     aria-label={`View lectures for ${mod.id}`}
