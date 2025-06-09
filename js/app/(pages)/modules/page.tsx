@@ -1,56 +1,31 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+// Removed direct Select imports here, as they are now encapsulated in ModuleFilter
+// import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import { Trash2 } from "lucide-react";
 
+// Import the modular components
+import { AddModuleDialog } from "@/app/(pages)/modules/components/addModuleDialog"; // Adjust path if needed
+import { ModuleCard } from "@/app/(pages)/modules/components/moduleCard"; // Adjust path if needed
+import { ModuleFilter } from "@/app/(pages)/modules/components/moduleFilter"; // Import the new ModuleFilter component
+
+// Define the Module interface (important to keep consistent across files)
 interface Module {
   id: string;
-  module_id: string;
+  module_id: string; // Ensure this matches your backend/Supabase schema
   name: string;
   term: string;
   year: string;
   outline_uploaded: string;
+}
+
+// Define the shape of the data that AddModuleDialog will submit
+interface NewModuleData {
+  moduleId: string;
+  name: string;
+  year: string;
+  term: string;
 }
 
 export default function Home() {
@@ -58,12 +33,10 @@ export default function Home() {
   const [selectedFilter, setSelectedFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [moduleCode, setModuleCode] = useState("");
-  const [moduleName, setModuleName] = useState("");
-  const [moduleYear, setModuleYear] = useState("");
-  const [moduleTerm, setModuleTerm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [isDeleting, setIsDeleting] = useState<string | null>(null); // Stores module_id being deleted
 
   useEffect(() => {
@@ -103,7 +76,6 @@ export default function Home() {
         throw new Error(errorData.error || "Failed to delete module");
       }
 
-      // Update the UI by removing the deleted module
       setModules(modules.filter((mod) => mod.module_id !== moduleId));
       toast.success("Module deleted successfully!");
     } catch (error) {
@@ -112,27 +84,17 @@ export default function Home() {
         error instanceof Error ? error.message : "Failed to delete module"
       );
     } finally {
-      setIsDeleting(null); // Reset deleting state
+      setIsDeleting(null);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleAddModule = async (newModuleData: NewModuleData) => {
     setIsSubmitting(true);
-    // Use your state variables directly instead of FormData
-    const newModule = {
-      moduleId: moduleCode,
-      name: moduleName,
-      year: moduleYear,
-      term: moduleTerm,
-    };
-
     try {
-      // ... (your fetch logic)
       const response = await fetch("/api/modules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newModule),
+        body: JSON.stringify(newModuleData),
       });
 
       if (!response.ok) {
@@ -143,13 +105,7 @@ export default function Home() {
       const result = await response.json();
       setModules((prev) => [...prev, result.module]);
 
-      // Reset form fields
-      setModuleCode("");
-      setModuleName("");
-      setModuleYear("");
-      setModuleTerm("");
-      setIsDialogOpen(false); // Close the dialog
-
+      setIsDialogOpen(false);
       toast.success("Module added successfully!");
     } catch (error) {
       console.error("Error adding module:", error);
@@ -161,6 +117,7 @@ export default function Home() {
     }
   };
 
+  // The options for the filter are derived from the modules data
   const yearTermOptions = Array.from(
     new Set(modules.map((m) => `${m.year} ${m.term}`))
   ).sort();
@@ -183,127 +140,19 @@ export default function Home() {
       )}
 
       <div className="mb-6 w-full mx-auto flex items-center gap-4">
-        <div className="w-auto min-w-[180px]">
-          <Select value={selectedFilter} onValueChange={setSelectedFilter}>
-            <SelectTrigger className="w-full whitespace-nowrap">
-              <SelectValue placeholder="Filter" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">All Modules</SelectItem>
-                {yearTermOptions.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {value}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Render the ModuleFilter component here */}
+        <ModuleFilter
+          options={yearTermOptions}
+          selectedValue={selectedFilter}
+          onValueChange={setSelectedFilter}
+        />
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          {" "}
-          {/* Control dialog visibility */}
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              className="cursor-pointer"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Adding..." : "Add Module"}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Add Module</DialogTitle>
-              <DialogDescription>
-                Add a new module. Click save when you're done.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-4 py-4">
-                <div className="flex items-center gap-4">
-                  <Label htmlFor="moduleCode" className="w-32 text-right">
-                    Module Code
-                  </Label>
-                  <Input
-                    id="moduleCode"
-                    name="moduleCode"
-                    required
-                    placeholder="e.g., MKT101"
-                    className="flex-1"
-                    value={moduleCode} // Controlled input
-                    onChange={(e) => setModuleCode(e.target.value)}
-                  />
-                </div>
-                {/* Repeat for name, year, and term */}
-                <div className="flex items-center gap-4">
-                  <Label htmlFor="name" className="w-32 text-right">
-                    Module Name
-                  </Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    required
-                    placeholder="e.g., Introduction to Marketing"
-                    className="flex-1"
-                    value={moduleName}
-                    onChange={(e) => setModuleName(e.target.value)}
-                  />
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <Label htmlFor="year" className="w-32 text-right">
-                    Year
-                  </Label>
-                  <Input
-                    id="year"
-                    name="year"
-                    required
-                    placeholder="e.g., 2023"
-                    className="flex-1"
-                    value={moduleYear}
-                    onChange={(e) => setModuleYear(e.target.value)}
-                  />
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <Label htmlFor="term" className="w-32 text-right">
-                    Term
-                  </Label>
-                  <Select
-                    name="term"
-                    required
-                    value={moduleTerm}
-                    onValueChange={setModuleTerm}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select term" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Mich">Mich</SelectItem>
-                      <SelectItem value="Lent">Lent</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="cursor-pointer"
-                  >
-                    Cancel
-                  </Button>
-                </DialogClose>
-                <Button type="submit" className="cursor-pointer">
-                  Add Module
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <AddModuleDialog
+          isOpen={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onSubmit={handleAddModule}
+          isSubmitting={isSubmitting}
+        />
       </div>
 
       {loading ? (
@@ -312,75 +161,12 @@ export default function Home() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {filteredModules.length > 0 ? (
             filteredModules.map((mod) => (
-              <Card
+              <ModuleCard
                 key={mod.id}
-                className="relative border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition duration-200 dark:bg-gray-800/50"
-              >
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
-                      aria-label={`Delete module ${mod.id}`}
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently
-                        delete the module <strong>{mod.name}</strong>.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => handleDeleteModule(mod.module_id)}
-                        disabled={isDeleting === mod.module_id}
-                      >
-                        {isDeleting === mod.module_id
-                          ? "Deleting..."
-                          : "Delete"}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-
-                <CardHeader>
-                  <CardTitle className="text-lg sm:text-xl font-semibold">
-                    🧩 {mod.module_id}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm mb-2">📘 {mod.name}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    📅 Term: {mod.term}
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    📆 Year: {mod.year}
-                  </p>
-                </CardContent>
-                <CardFooter>
-                  <Link
-                    href={{
-                      pathname: `/modules/${mod.module_id}`,
-                      query: {
-                        name: mod.name,
-                        year: mod.year,
-                        term: mod.term,
-                        uploaded: mod.outline_uploaded,
-                      },
-                    }}
-                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                    aria-label={`View lectures for ${mod.id}`}
-                  >
-                    👇 View Lectures
-                  </Link>
-                </CardFooter>
-              </Card>
+                module={mod}
+                onDelete={handleDeleteModule}
+                isDeleting={isDeleting}
+              />
             ))
           ) : (
             <div className="col-span-full text-center py-12">
