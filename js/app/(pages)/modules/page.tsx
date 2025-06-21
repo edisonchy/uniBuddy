@@ -17,7 +17,6 @@ interface Module {
   name: string;
   term: string;
   year: string;
-  outline_uploaded: string;
 }
 
 // Define the shape of the data that AddModuleDialog will submit

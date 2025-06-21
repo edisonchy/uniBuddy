@@ -31,7 +31,6 @@ interface Module {
   name: string;
   term: string;
   year: string;
-  outline_uploaded: string;
 }
 
 // Define the props for the ModuleCard component
@@ -101,7 +100,6 @@ export function ModuleCard({ module, onDelete, isDeleting }: ModuleCardProps) {
               name: module.name,
               year: module.year,
               term: module.term,
-              uploaded: module.outline_uploaded,
             },
           }}
           className="text-sm text-blue-600 dark:text-blue-400 hover:underline"

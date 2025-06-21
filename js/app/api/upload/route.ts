@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
 
     // Alternatively, if you need to transform or ensure JSON:
     const successData = await flaskResponse.json();
+    console.log("Flask response:", successData);
     return NextResponse.json(successData, { status: flaskResponse.status }); // Explicitly return with status
   } catch (error) {
     console.error("Next.js API route encountered an unexpected error:", error);
