@@ -1,0 +1,7 @@
+supabase
+python-dotenv
+PyPDF2
+langchain
+langchain-groq
+flask
+flask-cors

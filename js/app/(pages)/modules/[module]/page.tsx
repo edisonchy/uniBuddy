@@ -6,14 +6,15 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useState, useCallback, useEffect } from "react";
 import { useDropzone, FileRejection } from "react-dropzone";
 import { toast } from "sonner";
+import { PostgrestError } from "@supabase/supabase-js";
 
 // Import your Supabase client
 import { supabase } from "@/lib/client";
 
 // Import the FileUploadCard component
 import FileUploadCard from "@/app/(pages)/modules/[module]/components/fileUploadCard";
+import Header from "@/app/(pages)/modules/[module]/components/header";
 
-// Define the interface for your processed data
 interface ProcessedData {
   course_outline: string;
   lecturers: { name: string; email: string }[];
@@ -45,7 +46,8 @@ export default function OutlinePage() {
   const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [processedContent, setProcessedContent] = useState<ProcessedData | null>(null);
+  const [processedContent, setProcessedContent] =
+    useState<ProcessedData | null>(null);
 
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
@@ -76,13 +78,15 @@ export default function OutlinePage() {
         console.log("[fetchAndSetOutline] Data found.");
         setProcessedContent(data.content as ProcessedData);
       } else {
+        // If no matching data is returned (e.g., moduleId not found), explicitly clear processed content to avoid showing stale data.
         console.log("[fetchAndSetOutline] No data found (PGRST116).");
         setProcessedContent(null);
       }
-    } catch (err: any) {
-      console.error("[fetchAndSetOutline] Unexpected error:", err);
+    } catch (err: unknown) {
+      const supaError = err as PostgrestError;
+      console.error("[fetchAndSetOutline] Unexpected error:", supaError);
       setInitialLoadError(
-        err.message || "An unexpected error occurred during fetch."
+        supaError?.message ?? "An unexpected error occurred during fetch."
       );
       setProcessedContent(null);
     } finally {
@@ -199,32 +203,19 @@ export default function OutlinePage() {
   };
 
   const handleReset = () => {
-    setProcessedContent(null);
-    setFiles([]);
-    setUploadError(null);
-    setInitialLoadError(null);
-    setIsInitialLoading(true);
-    fetchAndSetOutline();
+    console.log("reset");
+    // setProcessedContent(null);
+    // setFiles([]);
+    // setUploadError(null);
+    // setInitialLoadError(null);
+    // setIsInitialLoading(true);
+    // fetchAndSetOutline();
   };
 
   return (
     <main className="min-h-screen p-8 sm:p-20 bg-white text-black dark:bg-[#0a0a0a] dark:text-white">
       <section className="mb-6">
-        <Link
-          href="/modules"
-          className="inline-block mb-4 text-blue-600 dark:text-blue-400 hover:underline text-sm"
-        >
-          ← Back to Modules
-        </Link>
-
-        <div className="flex items-end gap-6 mb-10">
-          <h1 className="text-3xl sm:text-5xl font-bold">
-            📘 {moduleId} - {name}
-          </h1>
-          <div className="pb-1 text-md text-gray-600 dark:text-gray-400">
-            {year} {term}
-          </div>
-        </div>
+        <Header moduleId={moduleId} name={name} year={year} term={term} />
 
         {isInitialLoading ? (
           <div className="text-center py-12 text-gray-600 dark:text-gray-400">
@@ -248,18 +239,19 @@ export default function OutlinePage() {
                 <strong>Outline:</strong> {processedContent.course_outline}
               </p>
 
-              {processedContent.lecturers && processedContent.lecturers.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="font-semibold text-lg mb-2">Lecturers:</h3>
-                  <ul className="list-disc list-inside ml-4 space-y-1">
-                    {processedContent.lecturers.map((lec, index) => (
-                      <li key={index}>
-                        {lec.name} ({lec.email})
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {processedContent.lecturers &&
+                processedContent.lecturers.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="font-semibold text-lg mb-2">Lecturers:</h3>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      {processedContent.lecturers.map((lec, index) => (
+                        <li key={index}>
+                          {lec.name} ({lec.email})
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
               {processedContent.textbook && (
                 <div className="mb-4">
@@ -268,13 +260,16 @@ export default function OutlinePage() {
                     <strong>Title:</strong> {processedContent.textbook.title}
                   </p>
                   <p className="text-sm">
-                    <strong>Authors:</strong> {processedContent.textbook.authors}
+                    <strong>Authors:</strong>{" "}
+                    {processedContent.textbook.authors}
                   </p>
                   <p className="text-sm">
-                    <strong>Edition:</strong> {processedContent.textbook.edition}
+                    <strong>Edition:</strong>{" "}
+                    {processedContent.textbook.edition}
                   </p>
                   <p className="text-sm">
-                    <strong>Publisher:</strong> {processedContent.textbook.publisher}
+                    <strong>Publisher:</strong>{" "}
+                    {processedContent.textbook.publisher}
                   </p>
                   <p className="text-sm">
                     <strong>Year:</strong> {processedContent.textbook.year}
@@ -282,29 +277,35 @@ export default function OutlinePage() {
                 </div>
               )}
 
-              {processedContent.learning_outcomes && processedContent.learning_outcomes.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="font-semibold text-lg mb-2">Learning Outcomes:</h3>
-                  <ul className="list-disc list-inside ml-4 space-y-1">
-                    {processedContent.learning_outcomes.map((outcome, index) => (
-                      <li key={index}>{outcome}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {processedContent.learning_outcomes &&
+                processedContent.learning_outcomes.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="font-semibold text-lg mb-2">
+                      Learning Outcomes:
+                    </h3>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      {processedContent.learning_outcomes.map(
+                        (outcome, index) => (
+                          <li key={index}>{outcome}</li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                )}
 
-              {processedContent.assessment && processedContent.assessment.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-lg mb-2">Assessments:</h3>
-                  <ul className="list-disc list-inside ml-4 space-y-1">
-                    {processedContent.assessment.map((item, index) => (
-                      <li key={index}>
-                        <strong>{item.method}:</strong> {item.weighting}%
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {processedContent.assessment &&
+                processedContent.assessment.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">Assessments:</h3>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      {processedContent.assessment.map((item, index) => (
+                        <li key={index}>
+                          <strong>{item.method}:</strong> {item.weighting}%
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
             </div>
 
             {/* Topics Section */}
@@ -315,7 +316,9 @@ export default function OutlinePage() {
                   // Use Link to make the entire box clickable
                   <Link
                     key={index} // Using index as key is okay here if topics don't reorder
-                    href={`/modules/${moduleId}/topic/${encodeURIComponent(topic)}`}
+                    href={`/modules/${moduleId}/topic/${encodeURIComponent(
+                      topic
+                    )}`}
                     className="block border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm hover:shadow-md transition duration-200 bg-white dark:bg-gray-800 cursor-pointer"
                   >
                     <h3 className="text-lg font-semibold">📝 {topic}</h3>

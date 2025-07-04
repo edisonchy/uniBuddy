@@ -1,25 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-// Removed direct Select imports here, as they are now encapsulated in ModuleFilter
-// import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
-// Import the modular components
-import { AddModuleDialog } from "@/app/(pages)/modules/components/addModuleDialog"; // Adjust path if needed
-import { ModuleCard } from "@/app/(pages)/modules/components/moduleCard"; // Adjust path if needed
-import { ModuleFilter } from "@/app/(pages)/modules/components/moduleFilter"; // Import the new ModuleFilter component
 
-// Define the Module interface (important to keep consistent across files)
+import { AddModuleDialog } from "@/app/(pages)/modules/components/addModuleDialog"; 
+import { ModuleCard } from "@/app/(pages)/modules/components/moduleCard"; 
+import { ModuleFilter } from "@/app/(pages)/modules/components/moduleFilter"; 
+
 interface Module {
   id: string;
-  module_id: string; // Ensure this matches your backend/Supabase schema
+  module_id: string; 
   name: string;
   term: string;
   year: string;
 }
 
-// Define the shape of the data that AddModuleDialog will submit
 interface NewModuleData {
   moduleId: string;
   name: string;
@@ -31,7 +27,7 @@ export default function Home() {
   const [modules, setModules] = useState<Module[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [dbError, setsbError] = useState("");
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,7 +49,7 @@ export default function Home() {
         if (!data.modules) throw new Error("Invalid data format");
         setModules(data.modules);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        setsbError(err instanceof Error ? err.message : "Unknown error");
         console.error("Failed to fetch modules:", err);
       } finally {
         setLoading(false);
@@ -120,7 +116,6 @@ export default function Home() {
   const yearTermOptions = Array.from(
     new Set(modules.map((m) => `${m.year} ${m.term}`))
   ).sort();
-
   const filteredModules =
     selectedFilter === "" || selectedFilter === "all"
       ? modules
@@ -132,9 +127,9 @@ export default function Home() {
         Course Modules
       </h1>
 
-      {error && (
+      {dbError && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+          {dbError}
         </div>
       )}
 

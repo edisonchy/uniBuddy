@@ -5,9 +5,10 @@ import time
 import logging
 
 # Assuming these imports set up your Supabase client correctly
-from download_outline import download_outline, supabase
+from supabasedb import supabase
 from process_outline import process_outline
 from upload_data_supabase import upload_data_supabase
+from process_ppt import process_ppt
 
 
 app = Flask(__name__)
@@ -16,7 +17,7 @@ CORS(app)
 logging.basicConfig(level=logging.INFO)
 app.logger.setLevel(logging.INFO)
 
-LOCAL_UPLOAD_FOLDER = './downloads/outlines'
+LOCAL_UPLOAD_FOLDER = './downloads/'
 
 if not os.path.exists(LOCAL_UPLOAD_FOLDER):
     os.makedirs(LOCAL_UPLOAD_FOLDER)
@@ -61,12 +62,12 @@ def upload_outline_to_storage():
         # --- 3. Generate Safe Filename for Local and Supabase Storage ---
         original_filename_no_ext = os.path.splitext(file.filename)[0]
         file_extension = os.path.splitext(file.filename)[1]
-        timestamp = int(time.time())
 
-        local_filename = f"{moduleId}_{original_filename_no_ext}_{timestamp}{file_extension}"
+        local_filename = f"outlines/{moduleId}_{original_filename_no_ext}{file_extension}"
         local_file_path = os.path.join(LOCAL_UPLOAD_FOLDER, local_filename)
 
-        supabase_file_path = f"{moduleId}/{original_filename_no_ext}-{timestamp}{file_extension}"
+        supabase_file_path = f"{moduleId}/{original_filename_no_ext}{file_extension}"
+
         app.logger.info(f"Generated local path: {local_file_path}")
         app.logger.info(f"Generated Supabase path: {supabase_file_path}")
 
@@ -191,6 +192,69 @@ def upload_outline_to_storage():
         app.logger.error("Unhandled error in /process-outline: %s", e, exc_info=True)
         return jsonify({"error": "An internal server error occurred."}), 500
 
+@app.route("/process-ppt", methods=["POST"])
+def process_slide_pdf():
+    try:
+        if "file" not in request.files:
+            return jsonify({"error": "Missing file"}), 400
+        file = request.files["file"]
+
+        module_id = request.form.get("moduleId")
+        topic = request.form.get("topic")
+
+        if not file or not module_id or not topic:
+            return jsonify({"error": "Missing file, moduleId, or topic"}), 400
+
+        if file.filename == "":
+            return jsonify({"error": "No selected file"}), 400
+
+        if file.content_type != "application/pdf":
+            return jsonify({"error": "Only PDF files are allowed"}), 400
+
+        # --- 3. Generate File Paths ---
+        original_filename_no_ext = os.path.splitext(file.filename)[0]
+        file_extension = os.path.splitext(file.filename)[1]
+
+        local_filename = f"slides/{module_id}_{topic}_{original_filename_no_ext}{file_extension}"
+        local_path = os.path.join(LOCAL_UPLOAD_FOLDER, local_filename)
+
+        # --- 4. Save Locally ---
+        try:
+            file.save(local_path)
+            app.logger.info("File successfully saved locally to: %s", local_path)
+        except Exception as e:
+            app.logger.error("Failed to save file locally: %s", e, exc_info=True)
+            return jsonify({"error": f"Failed to save file locally: {str(e)}"}), 500
+
+        # --- 5. Process with process_ppt ---
+        result = process_ppt(local_path, topic, module_id)
+
+        # --- 6. Delete Local File ---
+        try:
+            if os.path.exists(local_path):
+                os.remove(local_path)
+                app.logger.info("Successfully deleted local file: %s", local_path)
+        except Exception as e:
+            app.logger.warning("Failed to delete local file: %s", e, exc_info=True)
+
+        # --- 7. Return response based on result ---
+        if result.get("topic_related_to_ppt", "").strip().lower() == "no":
+            return jsonify({
+                "status": "not_related",
+                "message": "Presentation is not related to the topic",
+                "result": result
+            }), 200
+
+        return jsonify({
+            "status": "success",
+            "message": "Presentation processed and uploaded successfully",
+            "result": result
+        }), 200
+
+    except Exception as e:
+        app.logger.error("Unhandled error in /process-ppt: %s", e, exc_info=True)
+        return jsonify({"error": "Internal server error", "details": str(e)}), 500
+    
 if __name__ == '__main__':
     from dotenv import load_dotenv
     load_dotenv()
