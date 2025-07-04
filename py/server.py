@@ -1,7 +1,6 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
 import os
-import time
 import logging
 
 # Assuming these imports set up your Supabase client correctly
@@ -9,6 +8,7 @@ from supabasedb import supabase
 from process_outline import process_outline
 from upload_data_supabase import upload_data_supabase
 from process_ppt import process_ppt
+from process_chat import process_chat
 
 
 app = Flask(__name__)
@@ -255,6 +255,28 @@ def process_slide_pdf():
         app.logger.error("Unhandled error in /process-ppt: %s", e, exc_info=True)
         return jsonify({"error": "Internal server error", "details": str(e)}), 500
     
+
+@app.route("/process-chat", methods=["POST"])
+def process_chat_route():
+    data = request.get_json() or {}
+    message = data.get("message")
+    topic = data.get("topic")
+    module_id = data.get("moduleId")
+    chat_history = data.get("chatHistory")
+    if not all([message, topic, module_id]):
+        return jsonify({"error": "Missing message, topic, moduleId, or chatHistory"}), 400
+
+
+    print(message, topic, module_id, chat_history)
+
+
+    response = process_chat(message, topic, module_id, chat_history)
+    return jsonify({"answer": response}), 200
+
+    # return Response(
+    #     stream_with_context(stream_chat(message, topic, module_id, chat_history)),
+    #     mimetype="text/event-stream"
+    # )
 if __name__ == '__main__':
     from dotenv import load_dotenv
     load_dotenv()

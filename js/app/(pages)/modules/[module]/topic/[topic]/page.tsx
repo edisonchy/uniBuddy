@@ -12,10 +12,10 @@ import TopicUploadCard from "@/app/(pages)/modules/[module]/topic/[topic]/compon
 import { supabase } from "@/lib/client";
 
 // Define interface for chat messages
-interface ChatMessage {
-  role: "user" | "model";
+type ChatMessage = {
+  role: "user" | "system";
   text: string;
-}
+};
 
 export default function TopicPage() {
   const params = useParams();
@@ -156,86 +156,94 @@ export default function TopicPage() {
       role: "user",
       text: currentMessage.trim(),
     };
-    const newChatHistory = [...chatHistory, userMessage];
-    setChatHistory(newChatHistory);
+    setChatHistory((prev) => [...prev, userMessage]);
     setCurrentMessage("");
     setIsSendingMessage(true);
 
     try {
-      // Prepare chat history for the LLM API call
-      // Only send roles the LLM understands and text parts
-      const llmChatHistory = newChatHistory.map((msg) => ({
-        role: msg.role,
-        parts: [{ text: msg.text }],
-      }));
-
-      const prompt = `You are an AI assistant designed to help students understand the module topic "${decodeURIComponent(
-        topic
-      )}" within the module "${moduleId}". Answer questions directly related to this topic. If a question is outside the scope of this specific topic, kindly state that you cannot answer it and offer to help with the current topic.
-      
-      Current Topic: "${decodeURIComponent(topic)}"
-      Module ID: "${moduleId}"
-      
-      User's question: "${userMessage.text}"`;
-
-      const payload = {
-        contents: [
-          ...llmChatHistory.slice(-5),
-          { role: "user", parts: [{ text: prompt }] },
-        ], // Send last 5 messages + current prompt for context
-      };
-
-      // ** IMPORTANT: DO NOT provide an actual API key here. Canvas will inject it. **
-      const apiKey = "";
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-      const response = await fetch(apiUrl, {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          message: userMessage.text,
+          topic,
+          moduleId,
+          chatHistory, // optional for context
+        }),
       });
 
       if (!response.ok) {
-        const errorBody = await response.json();
-        throw new Error(
-          `API error: ${response.statusText} - ${JSON.stringify(errorBody)}`
-        );
+        const err = await response.json();
+        throw new Error(err.error || response.statusText);
       }
 
-      const result = await response.json();
-
-      if (
-        result.candidates &&
-        result.candidates.length > 0 &&
-        result.candidates[0].content &&
-        result.candidates[0].content.parts &&
-        result.candidates[0].content.parts.length > 0
-      ) {
-        const aiResponseText = result.candidates[0].content.parts[0].text;
-        setChatHistory((prev) => [
-          ...prev,
-          { role: "model", text: aiResponseText },
-        ]);
-      } else {
-        setChatHistory((prev) => [
-          ...prev,
-          { role: "model", text: "Sorry, I could not generate a response." },
-        ]);
-        console.error("Unexpected API response structure:", result);
-      }
-    } catch (error) {
-      console.error("Error sending message to AI:", error);
+      const data = await response.json();
+      const aiText = data.answer ?? "🤖 Sorry, I couldn't generate a response.";
+      setChatHistory((prev) => [
+        ...prev,
+        {
+          role: "system",
+          text: aiText,
+        },
+      ])
+    } catch (e: any) {
+      console.error("AI chat error:", e);
       setChatHistory((prev) => [
         ...prev,
         {
           role: "model",
-          text: "Error: Could not connect to AI. Please try again later.",
+          text: "⚠️ Sorry, something went wrong. Please try again.",
         },
       ]);
     } finally {
       setIsSendingMessage(false);
     }
   };
+//   const handleSendMessage = async () => {
+//   if (!currentMessage.trim()) return;
+
+//   setChatHistory(prev => [...prev, { role: "user", text: currentMessage.trim() }]);
+//   setCurrentMessage("");
+//   setIsSendingMessage(true);
+
+//   try {
+//     const res = await fetch("/api/chat", {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify({ message: currentMessage, topic, moduleId, chatHistory }),
+//     });
+
+//     if (!res.ok) {
+//       const errText = await res.text().catch(() => "Error");
+//       throw new Error(errText);
+//     }
+
+//     const reader = res.body!.getReader();
+//     const decoder = new TextDecoder();
+
+//     setChatHistory(prev => [...prev, { role: "model", text: "" }]);
+
+//     while (true) {
+//       const { done, value } = await reader.read();
+//       if (done) break;
+
+//       const chunk = decoder.decode(value);
+//       setChatHistory(prev =>
+//         prev.map((msg, i) =>
+//           i === prev.length - 1 ? { ...msg, text: msg.text + chunk } : msg
+//         )
+//       );
+//     }
+//   } catch (e: any) {
+//     console.error("Stream error:", e);
+//     setChatHistory(prev => [
+//       ...prev,
+//       { role: "model", text: `⚠️ ${e.message}` },
+//     ]);
+//   } finally {
+//     setIsSendingMessage(false);
+//   }
+// };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !isSendingMessage) {

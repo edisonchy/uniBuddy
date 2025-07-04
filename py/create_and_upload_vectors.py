@@ -4,10 +4,11 @@ from supabasedb import supabase
 import os
 
 def create_and_upload_vectors(text: str, file_path: str, topic: str, module_id: str):
-    # --- 1. Split into chunks ---
-    chunks = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200).split_text(text)
+    chunks = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200
+    ).split_text(text)
 
-    # --- 2. Create embeddings ---
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         model_kwargs={"device": "cpu"},
@@ -15,10 +16,8 @@ def create_and_upload_vectors(text: str, file_path: str, topic: str, module_id: 
     )
     vectors = embeddings.embed_documents(chunks)
 
-    # --- 3. Prepare insert payload ---
-    payload = []
     file_name = os.path.basename(file_path)
-
+    payload = []
     for chunk, vector in zip(chunks, vectors):
         payload.append({
             "chunk": chunk,
@@ -28,8 +27,7 @@ def create_and_upload_vectors(text: str, file_path: str, topic: str, module_id: 
             "module_id": module_id
         })
 
-    # --- 4. Insert into Supabase ---
     response = supabase.table("Slidechunks").insert(payload).execute()
+    print("✅ Upload response:", response)
 
-    # --- 5. Debug result ---
-    print("✅ Insert response:", response)
+# create_and_upload_vectors("Hello world", "dummy.pdf", "Test Topic", "SCC100")
