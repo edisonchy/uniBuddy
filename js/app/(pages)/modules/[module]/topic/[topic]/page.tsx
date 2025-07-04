@@ -26,7 +26,7 @@ export default function TopicPage() {
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState<string>("");
   const [isSendingMessage, setIsSendingMessage] = useState<boolean>(false);
-  const chatEndRef = useRef<HTMLDivElement>(null); // Ref for auto-scrolling chat
+  const chatEndRef = useRef<HTMLDivElement>(null); 
 
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
@@ -168,7 +168,7 @@ export default function TopicPage() {
           message: userMessage.text,
           topic,
           moduleId,
-          chatHistory, // optional for context
+          chatHistory, 
         }),
       });
 
@@ -191,7 +191,7 @@ export default function TopicPage() {
       setChatHistory((prev) => [
         ...prev,
         {
-          role: "model",
+          role: "system",
           text: "⚠️ Sorry, something went wrong. Please try again.",
         },
       ]);
@@ -199,51 +199,6 @@ export default function TopicPage() {
       setIsSendingMessage(false);
     }
   };
-//   const handleSendMessage = async () => {
-//   if (!currentMessage.trim()) return;
-
-//   setChatHistory(prev => [...prev, { role: "user", text: currentMessage.trim() }]);
-//   setCurrentMessage("");
-//   setIsSendingMessage(true);
-
-//   try {
-//     const res = await fetch("/api/chat", {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify({ message: currentMessage, topic, moduleId, chatHistory }),
-//     });
-
-//     if (!res.ok) {
-//       const errText = await res.text().catch(() => "Error");
-//       throw new Error(errText);
-//     }
-
-//     const reader = res.body!.getReader();
-//     const decoder = new TextDecoder();
-
-//     setChatHistory(prev => [...prev, { role: "model", text: "" }]);
-
-//     while (true) {
-//       const { done, value } = await reader.read();
-//       if (done) break;
-
-//       const chunk = decoder.decode(value);
-//       setChatHistory(prev =>
-//         prev.map((msg, i) =>
-//           i === prev.length - 1 ? { ...msg, text: msg.text + chunk } : msg
-//         )
-//       );
-//     }
-//   } catch (e: any) {
-//     console.error("Stream error:", e);
-//     setChatHistory(prev => [
-//       ...prev,
-//       { role: "model", text: `⚠️ ${e.message}` },
-//     ]);
-//   } finally {
-//     setIsSendingMessage(false);
-//   }
-// };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !isSendingMessage) {

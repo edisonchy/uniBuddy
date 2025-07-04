@@ -24,27 +24,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Cannot reach Flask backend" }, { status: 502 });
   }
 }
-
-// export const runtime = "nodejs"
-// export const dynamic = "force-dynamic"
-
-// export async function POST(req: Request) {
-//   const { message, topic, moduleId, chatHistory } = await req.json()
-
-//   const upstream = await fetch(
-//     `${backendUrl}/process-chat`,
-//     {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify({ message, topic, moduleId, chatHistory }),
-//     }
-//   )
-
-//   return new Response(upstream.body, {
-//     headers: {
-//       "Content-Type": "text/event-stream",
-//       "Cache-Control": "no-cache",
-//       Connection: "keep-alive",
-//     },
-//   })
-// }

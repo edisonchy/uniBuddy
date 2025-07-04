@@ -29,5 +29,3 @@ def create_and_upload_vectors(text: str, file_path: str, topic: str, module_id: 
 
     response = supabase.table("Slidechunks").insert(payload).execute()
     print("✅ Upload response:", response)
-
-# create_and_upload_vectors("Hello world", "dummy.pdf", "Test Topic", "SCC100")
